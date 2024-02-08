@@ -1,6 +1,7 @@
 This project was designed to analyze the Nasdaq, and forecast its future using different machine learning models. 
   * Linear Regression
   * Random Forrest (not completed)
+  * Arima (not started)
 
 I set out to answer a few questions:
   * Are there certain industries, and stocks that have high correlation that is significant to the index?
