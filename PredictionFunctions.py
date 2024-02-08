@@ -28,8 +28,6 @@ def LR_Predict_Prices_No_Predictors(data,version):
     y_test = test_data['Activity_Close']
 
     # Convert dates to numerical representation (days since the start date)
-    #X_train['Numeric_Date'] = (X_train['Activity_DTTM'] - X_train['Activity_DTTM'].min()) / np.timedelta64(1, 'D')
-    #X_test['Numeric_Date'] = (X_test['Activity_DTTM'] - X_train['Activity_DTTM'].min()) / np.timedelta64(1, 'D')
     X_train.loc[:, 'Numeric_Date'] = (X_train['Activity_DTTM'] - X_train['Activity_DTTM'].min()) / np.timedelta64(1, 'D')
     X_test.loc[:, 'Numeric_Date'] = (X_test['Activity_DTTM'] - X_train['Activity_DTTM'].min()) / np.timedelta64(1, 'D')
 
@@ -37,7 +35,6 @@ def LR_Predict_Prices_No_Predictors(data,version):
     # Create and train a linear regression model
     model = LinearRegression()
     model.fit(X_train[['Numeric_Date']], y_train)
-
     # Make predictions on the test set
     test_predictions = model.predict(X_test[['Numeric_Date']])
 
