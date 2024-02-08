@@ -21,15 +21,8 @@ def getNasdaqTickers(database,schema,table_name):
     
         # Download Nasdaq Stock Ticker portfolio and push to SQL Server
         nasdaq_symbols = pd.read_csv('ftp://ftp.nasdaqtrader.com/SymbolDirectory/nasdaqlisted.txt', sep='|')
-        #condition = nasdaq_symbols['Symbol'].str.contains("File Creat")
-        #nasdaq_symbols = nasdaq_symbols.drop(nasdaq_symbols[condition].index)
 
         nasdaq_symbols.to_sql(schema=schema,name=table_name, con=DimensionsEngine, if_exists='replace', index=False)
-        
-        #delete_query = f"DELETE a FROM dimensions.dim.NasdaqStockTickers as a WHERE your_column LIKE '%File Creat%'"
-        #cursor.execute(delete_query)
-        #conn.commit()
-        #conn.close()
 
     except Exception as e:
         print(f"Error Downloading Nasdaq Symbols: {e}")
@@ -64,9 +57,6 @@ def uploadNasdaqTickerDatatoSQL(importdf,Database,Schema,Table):
     starttime           = datetime.now()
     table_exists        = 1
     server              = 'ANDREW_PC\ANDREWSSQLSEVER'
-    #database            = 'Nasdaq'
-    #schema              = 'dbo'
-    #table_name          = 'NasdaqHistory'
     trusted_connection  = 'yes'
     NasdaqEngine        = eng(f'mssql+pyodbc://{server}/{Database}?trusted_connection={trusted_connection}&driver=ODBC+Driver+17+for+SQL+Server&schema={Schema}')
 
