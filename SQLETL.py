@@ -1,8 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine as eng, MetaData
 from datetime import datetime, timedelta
-import numpy as np
-import matplotlib.pyplot as plt
 
 def does_table_exists(engine, table_name):
     meta = MetaData()
@@ -68,11 +66,7 @@ def uploadtoSQL(importdf, Database,Schema,Table):
     trusted_connection  = 'yes'
     NasdaqEngine        = eng(f'mssql+pyodbc://{server}/{database}?trusted_connection={trusted_connection}&driver=ODBC+Driver+17+for+SQL+Server&schema={schema}')
 
-    #new_records = importdf.merge(existing_data[['Ticker', 'MaxRecordedDateTime']], on=['Ticker', 'Activity_DTTM'], how='left', indicator=True).query('_merge == "left_only"').drop('_merge', axis=1)
     importdf.to_sql(schema=schema,name=table_name, con=NasdaqEngine, if_exists='append', index=False)
-    #enddatetime =datetime.now()
-    #timedifferential = enddatetime - starttime
-    #print(f"uploadModeltoSQL() append completed in {timedifferential.total_seconds() / 60}")
 
 
 # -- End uploadModeltoSQL()
