@@ -5,9 +5,11 @@ This project was designed as a proof of concept and training ground within techn
 
 I set out to answer a few questions:
   * Are there certain industries, and stocks that have high correlation that is significant to the index?
-  *   For this, I used QQQ to represent the Nasdaq
+  *   For this, I used QQQ as the Nasdaq-100 index
+  * Which individual ticker maintains a high correlation to the Nasdaq-100 index?
   * Can I predict 2024 using different training sets?
   * Who has better price control indicating stability?
+  * Can i obtain 70% forecast / prediction accuracy?
 
 Tasks:
   * Extract data from yFinance library
