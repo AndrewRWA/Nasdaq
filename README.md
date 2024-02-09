@@ -1,4 +1,4 @@
-This project was designed to analyze the Nasdaq, and forecast its future using different machine learning models. 
+This project was designed as a proof of concept and training ground within technologies to analyze, and forecast its future using different machine learning models. 
   * Linear Regression
   * Random Forrest (not completed)
   * Arima (not started)
@@ -10,7 +10,7 @@ I set out to answer a few questions:
   * Who has better price control indicating stability?
 
 Tasks:
-  * Extract data from yFinance
+  * Extract data from yFinance library
   * Load data into local SQL Server for perm storage (offline use)
   * Load data into Linear Regression Model
   *   Version 1.1.1 = 2010 - 2023 to predict 2024
