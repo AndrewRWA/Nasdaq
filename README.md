@@ -1,6 +1,6 @@
 This project was designed as a proof of concept and training ground within technologies to analyze, and forecast its future using different machine learning models. 
   * Linear Regression
-  * Random Forrest (not completed)
+  * Random Forrest
   * Arima (not started)
 
 I set out to answer a few questions:
