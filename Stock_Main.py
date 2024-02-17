@@ -1,7 +1,7 @@
-from ModelSQLData import getDatatoModel, uploadtoSQL
+from SQLETL import getDatatoModel, uploadtoSQL
 from StatFunctions import calculate_coefficients,calculate_beta
 from StockETL import getNasdaqTickers, downloadSQLdata, uploadNasdaqTickerDatatoSQL
-from PredictionFunctions import LR_Predict_Prices_No_Predictors
+from PredictionFunctions import LR_Predict_Prices_No_Predictors, train_random_forest_regression
 import pandas as pd
 import yfinance as yf
 import numpy as np
@@ -44,34 +44,34 @@ def timeout_input(prompt, timeout):
 
     return user_input
 #------------------------------------------------------------
-
-def get_yfiTickerData(startDttm,Symbols):
+# Function to download yFinance Ticker.History data for listed Symobls
+def get_yfi_TickerData(startDttm,Symbols):
     TickerData_objects = []
-    
     for ticker in Symbols: 
         try:
+            # capture ticker data
             TickerData_object = yf.Ticker(ticker)
+            # isolate the basic history of the ticker object
             historical_data = TickerData_object.history(start=startDttm)
-            #historical_earnings = TickerData_object.earnings
             
-            historical_data.index = historical_data.index.strftime('%Y-%m-%d %H:%M:%S')
+            # generate a column of date time from the history index
             dttm = pd.to_datetime(historical_data.index, errors='coerce')
 
+            # begin setting up for data frame to pass to SQL
             historical_data.insert(0,'Activity_DTTM',dttm)
             historical_data.insert(1,'Ticker',ticker)
             historical_data = historical_data.dropna(subset=['Activity_DTTM'])
 
             if not historical_data.empty:
                 TickerData_objects.append(historical_data)
-                print(f"{ticker} completed")
+                print(f"{ticker} Captured")
             else:
-                print("empty")
-
+                print(f" {ticker} is empty")
         except Exception as e:
-            print(f"get_yfiTickerData() - Exception for ticker {ticker}: {str(e)}")
+            print(f"get_yfi_TickerData() - Exception for ticker {ticker}: {str(e)}")
 
+    # transform TickerData_objects into a datafram and return
     df = pd.concat(TickerData_objects)
-
     return df
 
 #------------------------------------------------------------
@@ -156,7 +156,7 @@ fetchNasdaqTickers = False
 GetNewFinanceData = False
 getIndustry = False
 startLRMLoop = False
-runCoeff = False
+runCoeff = True
 #--------------------------------------------------------------------
 
 
@@ -182,7 +182,7 @@ NasdaqSymbols = sorted(NasdaqPortfolio_df['Symbol'].unique().tolist()) # Compreh
 
 getStart = '1990-01-01'
 if GetNewFinanceData:
-    yfiTickerData_Df = get_yfiTickerData(startDttm=getStart,Symbols=NasdaqSymbols)
+    yfiTickerData_Df = get_yfi_TickerData(startDttm=getStart,Symbols=NasdaqSymbols)
     uploadNasdaqTickerDatatoSQL(importdf=yfiTickerData_Df,Database='Nasdaq',Schema='dbo',Table='NasdaqHistory')
 else:
     print("Dont fetch ticker history from yFinance")
@@ -276,13 +276,97 @@ else:
 # End Calculating Coefficients
 #--------------------------------------------------------------------
 
-
-
 # Delete undesired columns from df
 del modelData['Dividends']
 del modelData['StockSplits']
 del modelData['CapitalGains']
 
+distinctTickerObject = []
+
+for ticker in unique_Tickers:
+        ticker_data = modelData[modelData["Ticker"] == ticker].copy()
+        ticker_data['TomorrowPrice'] = ticker_data['Activity_Close'].shift(-1)
+
+        # Set target to determine if we experienced a gain the next day
+        ticker_data['Target'] = (ticker_data['TomorrowPrice'] > ticker_data['Activity_Close']).astype(int)
+
+        distinctTickerObject.append(ticker_data)
+
+        print(f"Created Tomorrow for: {ticker}")
+
+print("Tomorrow Loop Completed")
+modelData = pd.concat([modelData] + distinctTickerObject, ignore_index=True)
+
+
+# periods = [2, 5, 60, 250] 
+# filtered_modelData = modelData[modelData["Ticker"] == "QQQ"].copy()
+# new_predictors = []
+# for period in periods:
+#     rolling_close_averages = filtered_modelData["Activity_Close"].rolling(period).mean()
+#     rolling_volume_averages = filtered_modelData["Volume"].rolling(period).mean()
+
+#     volume_column = f"Volume_Ratio_{period}_Days"
+#     filtered_modelData[volume_column] = filtered_modelData["Volume"] / rolling_volume_averages
+
+#     ratio_column = f"Close_Ratio_{period}_Days"
+#     filtered_modelData[ratio_column] = filtered_modelData["Activity_Close"] / rolling_close_averages
+
+#     trend_column = f"Trend_{period}_Days"
+#     filtered_modelData[trend_column] = filtered_modelData["Target"].shift(1).rolling(period).sum()
+
+#     new_predictors += [ratio_column, trend_column, volume_column]
+
+
+# secondPrediction = filtered_modelData.dropna()
+
+# # train the forest model
+
+# secondPrediction = secondPrediction[["Activity_DTTM","Activity_Open","Activity_Close","Activity_High","Activity_Low","Volume","Volume_Ratio_2_Days","Close_Ratio_2_Days","Trend_2_Days" \
+#                       ,"Volume_Ratio_5_Days","Close_Ratio_5_Days","Trend_5_Days"]]
+#predictions = train_random_forest_regression(secondPrediction)
+
+
+print('Begin Random Forest Model')
+startRFMLoop = False
+if startRFMLoop:
+    for ticker in unique_Tickers: 
+        df = stockDataLRM.loc[stockDataLRM['Ticker'] == ticker]
+
+        try:
+            predictedPrice = train_random_forest_regression(df)
+            #predictedPrice = predictedPrice.dropna(subset=['Activity_DTTM'])
+            predictedPrice["Version"] = "1.1.2"
+            predictedPrice["Model"] = "Random Forest Regressor"
+            predictedPrice["Ticker"] = ticker
+            columns_order = ['Activity_DTTM', 'Ticker', 'Predicted_Stock_Price','Version','Model'] 
+
+            predictedPrice.reindex(columns=columns_order)
+            if not predictedPrice.empty:
+                uploadtoSQL(importdf=predictedPrice,Database='Nasdaq',Schema='dbo',Table='NasdaqPredictedPrices')
+                print(f"Random Forest Ticker: {ticker}, uploaded")
+            else:
+                print("Empty")
+            
+        except Exception as e:
+            print(f"predict_tomorrows_stock_price() error: {e}")
+else:
+    print(f"Skip Random Forest")
+
+
+
+# plt.plot(predictions.index, predictions['PredictedPrice'], label='Training Data')
+# plt.plot(concatdf.index, y_test['Activity_Close'], label='Actual Prices')
+# plt.xlabel('Date')
+# plt.ylabel('Price')
+# plt.title('Actual vs Forecasted Prices (Multiplicative Forecast)')
+# plt.legend()
+# plt.show()
+
+
+
+
+
+'''
 distinctTickerObject = []
 
 for ticker in unique_Tickers:
@@ -360,6 +444,11 @@ print(f'Prediction Score: \n', precision_score(SecondPredictions['TargetBuySell'
 print(f'Prediction Percent: \n',SecondPredictions["TargetBuySell"].value_counts() / SecondPredictions.shape[0])
 print(f'Records in prediction data: ', secondPrediction.shape[0])
 uploadtoSQL(importdf=SecondPredictions,Database='Nasdaq',Schema='dbo',Table='NasdaqBuySell')
+'''
+
+
+
+
 
 '''
 model = RandomForestClassifier(n_estimators=200,min_samples_split=50,random_state=1)
@@ -376,6 +465,9 @@ secondPrediction = secondPrediction.drop(columns=columns_to_delete)
 print(f'Second Prediction results\n')
 print(SecondPredictions["Predictions"].value_counts())
 print(precision_score(SecondPredictions["Target"],SecondPredictions['Predictions']))
+
+
+
 '''
 # End SECOND data modeling to predict if price will go up or down using RandomForestClassifier()
 #--------------------------------------------------------------------
