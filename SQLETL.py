@@ -19,7 +19,7 @@ def getDatatoModel(database,schema,table_name,startDttm):
             print(f"Error: {str(e)}")
         return data.iloc[0, 0] if not data.empty else None
     
-    minDatequery = f"SELECT min(Activity_DTTM) as minActivity_DTTM FROM {database}.{schema}.{table_name} where Activity_DTTM >= '{startDttm}' "
+    minDatequery = f"SELECT min(Activity_DTTM) as minActivity_DTTM, max(Activity_DTTM) as maxActivity_DTTM FROM {database}.{schema}.{table_name} where Activity_DTTM >= '{startDttm}' "
     minDateValue = get_date_value(minDatequery)
     maxDatequery = f"SELECT max(Activity_DTTM) as maxActivity_DTTM FROM {database}.{schema}.{table_name} where Activity_DTTM >= '{startDttm}' "
     maxDateValue = get_date_value(maxDatequery)
@@ -44,7 +44,7 @@ def getDatatoModel(database,schema,table_name,startDttm):
                     FROM {database}.{schema}.{table_name} as a 
                     join cte as b 
                     on a.ticker = b.ticker 
-                    where year(Activity_DTTM) = '{datecounter}' """
+                    where year(Activity_DTTM) = '{datecounter}'  """
         data = pd.read_sql(sql=query,con=Engine)
         query_results_object.append(data)
         print("Execution results for: ", datecounter, " with ", data.shape[0], " size")
@@ -52,7 +52,7 @@ def getDatatoModel(database,schema,table_name,startDttm):
         datecounter += 1
         
     df = pd.concat(query_results_object)
-    df_copy = df.reset_index()
+
     print(f"Shape: {df.shape[0]}")
     return df
 
